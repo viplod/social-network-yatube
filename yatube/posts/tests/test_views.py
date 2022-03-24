@@ -28,7 +28,6 @@ class PostPagesTest(TestCase):
             b'\x02\x00\x01\x00\x00\x02\x02\x0C'
             b'\x0A\x00\x3B'
         )
-
         uploaded = SimpleUploadedFile(
             name='small.gif',
             content=small_gif,
@@ -191,6 +190,14 @@ class PostPagesTest(TestCase):
         for obj_elem, data in data_for_test.items():
             with self.subTest(obj_elem=obj_elem):
                 self.assertEqual(obj_elem, data)
+
+    def test_cache(self):
+        response = self.authorized_client.get(reverse('posts:index'))
+        count_before_del = len(response.context['page_obj'])
+        Post.objects.get(pk=self.post.pk).delete()
+        response = self.authorized_client.get(reverse('posts:index'))
+        count_after_del = len(response.context['page_obj'])
+        self.assertEqual(count_before_del, count_after_del)
 
 
 class PaginatorViewsTest(TestCase):
