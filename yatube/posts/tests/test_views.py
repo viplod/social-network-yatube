@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 
+from django.core.cache import cache
 from django import forms
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -43,6 +44,13 @@ class PostPagesTest(TestCase):
             author=cls.user,
             text='Тестовый пост',
             group=cls.group,
+
+            image=uploaded
+        )
+        cls.post = Post.objects.create(
+            author=cls.user,
+            text='Тестовый пост',
+            group=cls.group,
             image=uploaded
         )
 
@@ -54,6 +62,25 @@ class PostPagesTest(TestCase):
     def tearDownClass(cls):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+
+    def test_cache(self):
+        response_before_del = self.authorized_client.get(
+            reverse('posts:index')
+        )
+        Post.objects.get(pk=self.post.pk).delete()
+        response_after_del = self.authorized_client.get(
+            reverse('posts:index')
+        )
+        self.assertEqual(
+            response_before_del.content, response_after_del.content
+        )
+        cache.clear()
+        response_after_clear_cache = self.authorized_client.get(
+            reverse('posts:index')
+        )
+        self.assertNotEqual(
+            response_after_clear_cache.content, response_after_del.content
+        )
 
     def test_pages_uses_correct_template(self):
         templates_pages_names = {
@@ -191,13 +218,13 @@ class PostPagesTest(TestCase):
             with self.subTest(obj_elem=obj_elem):
                 self.assertEqual(obj_elem, data)
 
-    def test_cache(self):
-        response = self.authorized_client.get(reverse('posts:index'))
-        count_before_del = len(response.context['page_obj'])
-        Post.objects.get(pk=self.post.pk).delete()
-        response = self.authorized_client.get(reverse('posts:index'))
-        count_after_del = len(response.context['page_obj'])
-        self.assertEqual(count_before_del, count_after_del)
+    # def test_cache(self):
+    #     response = self.authorized_client.get(reverse('posts:index'))
+    #     count_before_del = len(response.context['page_obj'])
+    #     Post.objects.get(pk=self.post.pk).delete()
+    #     response = self.authorized_client.get(reverse('posts:index'))
+    #     count_after_del = len(response.context['page_obj'])
+    #     self.assertEqual(count_before_del, count_after_del)
 
 
 class PaginatorViewsTest(TestCase):
