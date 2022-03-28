@@ -1,15 +1,12 @@
 {% extends 'base.html' %}
-{% load cache %}
 {% block title %}
-  Последние обновления на сайте
+  Посты авторов на которые я подписан
 {% endblock %}
 {% block content %}
   {% include 'posts/includes/switcher.html' %}
-  {% cache 20 index_page %}
     {% for post in page_obj %}
       {% include 'includes/article.html' %}
       {% if not forloop.last %}<hr>{% endif %}
     {% endfor %}
-  {% endcache %}  
   {% include 'posts/includes/paginator.html' %}
 {% endblock %}

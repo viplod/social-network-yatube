@@ -92,3 +92,8 @@ class StaticURLTests(TestCase):
     def test_url_comment_for_authorized_client(self):
         response = self.authorized_client.get('/posts/1/comment/')
         self.assertRedirects(response, ('/posts/1/'))
+
+    def test_url_follow_for_anonymous_client(self):
+        response = self.guest_client.get('/follow/', follow=True)
+        self.assertRedirects(
+            response, ('/auth/login/?next=/follow/'))

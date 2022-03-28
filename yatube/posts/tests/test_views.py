@@ -9,7 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Group, Post
+from posts.models import Follow, Group, Post
 from posts.forms import PostForm
 
 User = get_user_model()
@@ -35,6 +35,8 @@ class PostPagesTest(TestCase):
             content_type='image/gif'
         )
         cls.user = User.objects.create_user(username='auth')
+        cls.follower = User.objects.create_user(username='HasNoName')
+        cls.follower_tempname = User.objects.create_user(username='tempname')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -47,16 +49,18 @@ class PostPagesTest(TestCase):
 
             image=uploaded
         )
-        cls.post = Post.objects.create(
-            author=cls.user,
-            text='Тестовый пост',
-            group=cls.group,
-            image=uploaded
+        cls.follow = Follow.objects.create(
+            user=cls.follower,
+            author=cls.user
         )
 
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.hasnoname_user = Client()
+        self.hasnoname_user.force_login(self.follower)
+        self.tempname_user = Client()
+        self.tempname_user.force_login(self.follower_tempname)
 
     @classmethod
     def tearDownClass(cls):
@@ -141,7 +145,7 @@ class PostPagesTest(TestCase):
                 'username': self.user
             }))
         first_object = response.context['page_obj'][0]
-        username_context = response.context['username']
+        username_context = response.context['author']
         count_context = response.context['count']
         self.assertIsInstance(count_context, int)
         data_for_test = {
@@ -218,13 +222,65 @@ class PostPagesTest(TestCase):
             with self.subTest(obj_elem=obj_elem):
                 self.assertEqual(obj_elem, data)
 
-    # def test_cache(self):
-    #     response = self.authorized_client.get(reverse('posts:index'))
-    #     count_before_del = len(response.context['page_obj'])
-    #     Post.objects.get(pk=self.post.pk).delete()
-    #     response = self.authorized_client.get(reverse('posts:index'))
-    #     count_after_del = len(response.context['page_obj'])
-    #     self.assertEqual(count_before_del, count_after_del)
+    def test_folliwing_unfollowing_to_author(self):
+        response = self.tempname_user.get(reverse(
+            'posts:follow_index',
+        ))
+        count_before_following = len(response.context['page_obj'])
+        response = self.tempname_user.get(reverse(
+            'posts:profile_follow', kwargs={
+                'username': self.user,
+            }))
+        response = self.tempname_user.get(reverse(
+            'posts:follow_index',
+        ))
+        count_after_following = len(response.context['page_obj'])
+        self.assertEqual(count_before_following + 1, count_after_following)
+        response = self.tempname_user.get(reverse(
+            'posts:profile_unfollow', kwargs={
+                'username': self.user,
+            }))
+        self.assertIsNone(response.context)
+
+    def test_view_post_following_author(self):
+        response = self.hasnoname_user.get(reverse(
+            'posts:follow_index',
+        ))
+        count_before_create_post = len(response.context['page_obj'])
+        form_data = {
+            'text': 'Тестовый текст для подписчиков',
+            'group': self.group.pk,
+        }
+        response = self.authorized_client.post(
+            reverse('posts:post_create'),
+            data=form_data,
+            follow=True
+        )
+        response = self.hasnoname_user.get(reverse(
+            'posts:follow_index',
+        ))
+        count_after_create_post = len(response.context['page_obj'])
+        self.assertNotEqual(count_before_create_post, count_after_create_post)
+
+    def test_view_post_notfollowing_author(self):
+        response = self.authorized_client.get(reverse(
+            'posts:follow_index',
+        ))
+        count_before_create_post = len(response.context['page_obj'])
+        form_data = {
+            'text': 'Тестовый текст для подписчиков',
+            'group': self.group.pk,
+        }
+        response = self.authorized_client.post(
+            reverse('posts:post_create'),
+            data=form_data,
+            follow=True
+        )
+        response = self.authorized_client.get(reverse(
+            'posts:follow_index',
+        ))
+        count_after_create_post = len(response.context['page_obj'])
+        self.assertEqual(count_before_create_post, count_after_create_post)
 
 
 class PaginatorViewsTest(TestCase):
