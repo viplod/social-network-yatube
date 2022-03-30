@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 
-from .models import Post, Group, User, Comment, Follow
+from .models import Post, Group, User, Follow
 from .forms import CommentForm, PostForm
 
 NUM_VIEW_POST = 10
@@ -38,21 +38,23 @@ def profile(request, username):
     author_posts = get_object_or_404(User, username=username)
     post_list = author_posts.posts.all()
     paginator = Paginator(post_list, NUM_VIEW_POST)
-    is_following = False
-    if not request.user.is_anonymous:
-        is_following = Follow.objects.filter(
-            user=request.user, author=author_posts
-        ).count()
+    is_authenticated = request.user.is_authenticated
+    if is_authenticated:
+        is_exists = Follow.objects.filter(
+            user=request.user,
+            author=author_posts
+        ).exists()
+    is_following = is_authenticated and not is_exists
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     count = post_list.count()
-    itsme = (request.user == author_posts)
+    it_is_me = request.user == author_posts
     context = {
         'author': author_posts,
         'page_obj': page_obj,
         'count': count,
         'following': is_following,
-        'itsme': itsme,
+        'it_is_me': it_is_me,
     }
     template = 'posts/profile.html'
     return render(request, template, context)
@@ -61,7 +63,7 @@ def profile(request, username):
 def post_detail(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
     form = CommentForm(request.POST or None)
-    comments = Comment.objects.filter(post__pk=post_id)
+    comments = post.comments.all()
     post_list = post.author.posts.all()
     count = post_list.count()
     context = {
@@ -126,8 +128,7 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    users_ids = request.user.follower.all().values_list('author', flat=True)
-    post_list = Post.objects.filter(author_id__in=users_ids)
+    post_list = Post.objects.filter(author__following__user=request.user)
     paginator = Paginator(post_list, NUM_VIEW_POST)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -141,13 +142,10 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     user = get_object_or_404(User, username=username)
-    if request.user != user and not Follow.objects.filter(
-        user=request.user,
-        author=user
-    ).count():
-        Follow.objects.create(
+    if request.user != user:
+        obj, created = Follow.objects.get_or_create(
             user=request.user,
-            author=user,
+            author=user
         )
     return redirect('posts:follow_index')
 

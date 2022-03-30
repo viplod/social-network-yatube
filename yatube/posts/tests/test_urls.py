@@ -69,6 +69,7 @@ class StaticURLTests(TestCase):
     def test_url_unexist(self):
         response = self.guest_client.get('/unexisting_page/')
         self.assertEqual(response.status_code, 404)
+        self.assertTemplateUsed(response, 'core/404.html')
 
     def test_url_create_for_anonymous_client(self):
         response = self.guest_client.get('/create/', follow=True)

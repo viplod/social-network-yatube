@@ -5,9 +5,19 @@ User = get_user_model()
 
 
 class Group(models.Model):
-    title = models.CharField(max_length=200)
-    slug = models.SlugField(unique=True)
-    description = models.TextField()
+    title = models.CharField(
+        'Название группы',
+        help_text='Введите название группы',
+        max_length=200
+    )
+    slug = models.SlugField(
+        'Slug',
+        help_text='Название группы латиницей',
+        unique=True,
+    )
+    description = models.TextField(
+        'Описание группы',
+        help_text='Напишите о чем группа')
 
     def __str__(self):
         return self.title
@@ -97,5 +107,11 @@ class Follow(models.Model):
     )
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "author"],
+                name="user_author",
+            )
+        ]
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'

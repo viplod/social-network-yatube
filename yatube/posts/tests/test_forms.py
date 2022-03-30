@@ -54,7 +54,7 @@ class PostFormTest(TestCase):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
-    def test_create_post(self):
+    def test_create_post_authorized_client(self):
         posts_count = Post.objects.count()
         form_data = {
             'text': 'Тестовый текст',
@@ -80,7 +80,7 @@ class PostFormTest(TestCase):
         )
         self.assertEqual(Post.objects.count(), posts_count + 1)
 
-    def test_edit_post(self):
+    def test_edit_post_authorized_client(self):
         form_data = {
             'text': 'Новый тестовый текст',
             'group': self.group.pk
@@ -116,7 +116,7 @@ class PostFormTest(TestCase):
         self.assertEqual(Post.objects.count(), posts_count)
         self.assertRedirects(response, ('/auth/login/?next=/create/'))
 
-    def test_create_comment(self):
+    def test_create_comment_authorized_client(self):
         comment_count = Comment.objects.count()
         form_data = {
             'text': 'Тестовый комментарий',
@@ -142,3 +142,20 @@ class PostFormTest(TestCase):
                 post=self.post,
             ).exists()
         )
+
+    def test_create_comment_guest_client(self):
+        comment_count = Comment.objects.count()
+        form_data = {
+            'text': 'Тестовый комментарий',
+            'author': self.user,
+            'post': self.post,
+        }
+        response = self.guest_client.post(
+            reverse('posts:add_comment', kwargs={
+                'post_id': self.post.pk,
+            }),
+            data=form_data,
+            follow=True
+        )
+        self.assertEqual(Comment.objects.count(), comment_count)
+        self.assertRedirects(response, ('/auth/login/?next=/posts/1/comment/'))

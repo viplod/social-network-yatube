@@ -222,7 +222,7 @@ class PostPagesTest(TestCase):
             with self.subTest(obj_elem=obj_elem):
                 self.assertEqual(obj_elem, data)
 
-    def test_folliwing_unfollowing_to_author(self):
+    def test_folliwing_to_author(self):
         response = self.tempname_user.get(reverse(
             'posts:follow_index',
         ))
@@ -236,6 +236,12 @@ class PostPagesTest(TestCase):
         ))
         count_after_following = len(response.context['page_obj'])
         self.assertEqual(count_before_following + 1, count_after_following)
+
+    def test_unfolliwing_from_author(self):
+        response = self.tempname_user.get(reverse(
+            'posts:follow_index',
+        ))
+        self.assertIsNotNone(response.context)
         response = self.tempname_user.get(reverse(
             'posts:profile_unfollow', kwargs={
                 'username': self.user,
