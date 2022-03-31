@@ -239,15 +239,23 @@ class PostPagesTest(TestCase):
 
     def test_unfolliwing_from_author(self):
         response = self.tempname_user.get(reverse(
+            'posts:profile_follow', kwargs={
+                'username': self.user,
+            }))
+        response = self.tempname_user.get(reverse(
             'posts:follow_index',
         ))
         count_before_unfollowing = len(response.context['page_obj'])
+        self.assertEqual(count_before_unfollowing, 1)
         response = self.tempname_user.get(reverse(
             'posts:profile_unfollow', kwargs={
                 'username': self.user,
             }))
+        response = self.tempname_user.get(reverse(
+            'posts:follow_index',
+        ))
         count_after_unfollowing = len(response.context['page_obj'])
-        self.assertEqual(count_before_unfollowing, count_after_unfollowing + 1)
+        self.assertEqual(count_after_unfollowing, count_before_unfollowing - 1)
 
     def test_view_post_following_author(self):
         response = self.hasnoname_user.get(reverse(
