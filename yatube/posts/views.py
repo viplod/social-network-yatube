@@ -38,13 +38,10 @@ def profile(request, username):
     author_posts = get_object_or_404(User, username=username)
     post_list = author_posts.posts.all()
     paginator = Paginator(post_list, NUM_VIEW_POST)
-    is_authenticated = request.user.is_authenticated
-    if is_authenticated:
-        is_exists = Follow.objects.filter(
-            user=request.user,
-            author=author_posts
-        ).exists()
-    is_following = is_authenticated and not is_exists
+    is_following = request.user.is_authenticated and Follow.objects.filter(
+        user=request.user,
+        author=author_posts,
+    ).exists()
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     count = post_list.count()
