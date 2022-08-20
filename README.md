@@ -16,5 +16,5 @@ pip install -r requirements.txt
 ```
 python manage.py runserver
 ```
-### Авторы
-Юра
+### Автор
+_[Юра Ананьин](https://github.com/viplod/)_, python-developer  
